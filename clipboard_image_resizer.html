@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مغيّر أبعاد الصور</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6fa;--panel:#fff;--text:#182230;--muted:#64748b;--line:#dbe2ea;--accent:#2563eb;--accent2:#1d4ed8;--soft:#eff6ff;--danger:#b42318}
+@media(prefers-color-scheme:dark){:root{--bg:#101722;--panel:#182230;--text:#e5edf7;--muted:#a6b4c6;--line:#344256;--accent:#78a9ff;--accent2:#a9c8ff;--soft:#20324c;--danger:#ff8c83}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:32px auto;padding:0 16px}.top{margin-bottom:20px}.top h1{font-size:26px;margin:0 0 5px}.muted{color:var(--muted);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 3px 14px #00000008}
+.paste{border:2px dashed var(--line);border-radius:12px;padding:28px 16px;text-align:center;outline:none;cursor:text}.paste:focus,.paste.over{border-color:var(--accent);background:var(--soft)}
+.paste strong{display:block;font-size:17px;margin-bottom:5px}.paste .symbol{font-size:30px;line-height:1.3}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-weight:650;margin-bottom:6px}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);padding:11px 12px;font:inherit}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}button{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:10px 14px;font:inherit;font-weight:650;cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:white}button:hover{filter:brightness(.97)}button:disabled{opacity:.45;cursor:not-allowed}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.section-head h2{font-size:18px;margin:0}.count{font-size:12px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}.image-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);min-width:0}.preview{height:150px;background:repeating-conic-gradient(#8882 0 25%,transparent 0 50%) 50%/18px 18px;display:flex;align-items:center;justify-content:center}.preview img{max-width:100%;max-height:100%;object-fit:contain}.meta{padding:10px}.name{font-size:13px;font-weight:650;overflow-wrap:anywhere}.details{font-size:12px;color:var(--muted);margin:3px 0 9px}.card-actions{display:flex;gap:6px}.card-actions button{flex:1;padding:7px 8px;font-size:12px}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.note{padding:10px 12px;background:var(--soft);border-radius:9px;color:var(--muted);font-size:13px;margin-top:12px}
+.status{min-height:22px;color:var(--muted);font-size:13px;margin-top:8px}
+@media(max-width:560px){main{margin:18px auto}.grid{grid-template-columns:1fr}.panel{padding:14px}.top h1{font-size:22px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>مغيّر أبعاد الصور</h1>
+    <div class="muted">الصق الصور تباعًا، غيّر أبعادها دفعة واحدة، ثم انسخ النتائج مباشرة.</div>
+  </header>
+
+  <section class="panel">
+    <div class="section-head"><h2>1. أضف الصور</h2><span class="count" id="sourceCount">0 صورة</span></div>
+    <div class="paste" id="pasteArea" tabindex="0" role="textbox" aria-label="منطقة لصق الصور">
+      <div class="symbol">▣</div>
+      <strong>انقر هنا ثم الصق الصور باستخدام Ctrl+V</strong>
+      <span class="muted">يمكنك تكرار اللصق لإضافة صور متعددة. كما يمكنك سحب ملفات الصور وإفلاتها هنا.</span>
+    </div>
+    <div class="actions">
+      <button id="chooseBtn" type="button">اختيار ملفات صور</button>
+      <button id="clearSources" type="button">مسح الصور الأصلية</button>
+      <input id="fileInput" type="file" accept="image/*" multiple hidden>
+    </div>
+    <div id="sourceStatus" class="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="font-size:18px;margin:0 0 12px">2. أبعاد الصور الناتجة</h2>
+    <div class="grid">
+      <div class="field"><label for="width">العرض (px)</label><input id="width" type="number" min="1" max="12000" step="1" inputmode="numeric" placeholder="مثال: 1280"></div>
+      <div class="field"><label for="height">الارتفاع (px)</label><input id="height" type="number" min="1" max="12000" step="1" inputmode="numeric" placeholder="مثال: 720"></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="field"><label for="format">صيغة النتيجة</label><select id="format"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select></div>
+      <div class="field"><label for="quality">جودة JPEG / WebP</label><select id="quality"><option value="0.92">عالية جدًا (92%)</option><option value="0.85">عالية (85%)</option><option value="0.75">متوسطة (75%)</option><option value="1">أعلى جودة (100%)</option></select></div>
+    </div>
+    <div class="note">سيتم فرض العرض والارتفاع المحددين حرفيًا، حتى لو تغيّرت نسبة أبعاد الصورة (Stretch). تُحفظ آخر قيمتي عرض وارتفاع تلقائيًا على هذا الجهاز والمتصفح.</div>
+    <div class="actions"><button class="primary" id="resizeBtn" type="button">تغيير حجم جميع الصور</button><button id="clearResults" type="button">مسح النتائج</button></div>
+    <div id="resizeStatus" class="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><h2>3. الصور الناتجة — جاهزة للنسخ</h2><span class="count" id="resultCount">0 صورة</span></div>
+    <div id="results" class="empty">ستظهر الصور الناتجة هنا بعد المعالجة.</div>
+    <div class="note">اضغط «نسخ الصورة» لنقل الصورة المحددة إلى الحافظة، ثم الصقها في البرنامج المطلوب. الحافظة القياسية لا تحتفظ بعدة صور مستقلة في عملية نسخ واحدة، لذلك انسخ كل نتيجة على حدة.</div>
+    <div id="copyStatus" class="status" aria-live="polite"></div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const sources = [];
+  let results = [];
+  let nextId = 1;
+  const sourceCount = $('sourceCount'), resultCount = $('resultCount');
+  const pasteArea = $('pasteArea');
+
+  function setStatus(id, message){ $(id).textContent = message; }
+  function countText(n){ return `${n} ${n===1?'صورة':'صور'}`; }
+  function updateCounts(){ sourceCount.textContent=countText(sources.length); resultCount.textContent=countText(results.length); }
+
+  // Restore and persist the last dimensions.
+  for (const key of ['width','height']) {
+    const saved = localStorage.getItem('clipboard-resizer-'+key);
+    if (saved) $(key).value = saved;
+    $(key).addEventListener('input', () => localStorage.setItem('clipboard-resizer-'+key, $(key).value));
+  }
+
+  function addBlob(blob, name='صورة ملصوقة') {
+    if (!blob || !blob.type || !blob.type.startsWith('image/')) return false;
+    const id = nextId++;
+    const url = URL.createObjectURL(blob);
+    sources.push({id, blob, name, url});
+    updateSourceView();
+    return true;
+  }
+  function updateSourceView(){
+    updateCounts();
+    if (!sources.length) { $('sourceStatus').textContent=''; return; }
+    setStatus('sourceStatus', `تمت إضافة ${countText(sources.length)}. يمكنك متابعة اللصق لإضافة المزيد.`);
+  }
+  function clearSources(){
+    sources.forEach(x=>URL.revokeObjectURL(x.url));
+    sources.length=0; updateSourceView();
+  }
+  function clearResults(){
+    results.forEach(x=>URL.revokeObjectURL(x.url));
+    results=[]; updateResultView(); setStatus('resizeStatus','');
+  }
+  function updateResultView(){
+    updateCounts();
+    const host=$('results');
+    if (!results.length){host.className='empty';host.textContent='ستظهر الصور الناتجة هنا بعد المعالجة.';return;}
+    host.className='cards'; host.replaceChildren();
+    results.forEach((item,index)=>{
+      const card=document.createElement('article');card.className='image-card';
+      const preview=document.createElement('div');preview.className='preview';
+      const img=document.createElement('img');img.src=item.url;img.alt=item.name;preview.append(img);
+      const meta=document.createElement('div');meta.className='meta';
+      const name=document.createElement('div');name.className='name';name.textContent=item.name;
+      const details=document.createElement('div');details.className='details';details.textContent=`${item.width} × ${item.height} px · ${item.type.split('/')[1].toUpperCase()}`;
+      const actions=document.createElement('div');actions.className='card-actions';
+      const copy=document.createElement('button');copy.type='button';copy.textContent='نسخ الصورة';copy.addEventListener('click',()=>copyResult(item,copy));
+      const save=document.createElement('button');save.type='button';save.textContent='حفظ';save.addEventListener('click',()=>downloadResult(item));
+      actions.append(copy,save);meta.append(name,details,actions);card.append(preview,meta);host.append(card);
+    });
+  }
+  function loadFiles(files){
+    let added=0;
+    [...files].forEach((file,i)=>{if(addBlob(file,file.name||`صورة ${sources.length+i+1}`))added++;});
+    if(added) setStatus('sourceStatus',`تمت إضافة ${countText(added)}. الإجمالي: ${countText(sources.length)}.`);
+  }
+  $('chooseBtn').addEventListener('click',()=>$('fileInput').click());
+  $('fileInput').addEventListener('change',e=>{loadFiles(e.target.files);e.target.value='';});
+  $('clearSources').addEventListener('click',clearSources);
+  $('clearResults').addEventListener('click',clearResults);
+
+  pasteArea.addEventListener('click',()=>pasteArea.focus());
+  document.addEventListener('paste',e=>{
+    const items=[...(e.clipboardData?.items||[])];
+    const imageItems=items.filter(it=>it.type.startsWith('image/'));
+    if(!imageItems.length)return;
+    let added=0;
+    imageItems.forEach((it,i)=>{const blob=it.getAsFile();if(addBlob(blob,`صورة ملصوقة ${sources.length+i+1}`))added++;});
+    if(added){e.preventDefault();setStatus('sourceStatus',`تم لصق ${countText(added)}. الإجمالي: ${countText(sources.length)}.`);}
+  });
+  pasteArea.addEventListener('dragover',e=>{e.preventDefault();pasteArea.classList.add('over');});
+  pasteArea.addEventListener('dragleave',()=>pasteArea.classList.remove('over'));
+  pasteArea.addEventListener('drop',e=>{e.preventDefault();pasteArea.classList.remove('over');loadFiles(e.dataTransfer.files);});
+
+  function blobFromCanvas(canvas,type,quality){
+    return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('تعذّر إنشاء الصورة.')),type,quality));
+  }
+  async function resizeAll(){
+    const w=Number($('width').value),h=Number($('height').value);
+    if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>12000||h>12000){
+      setStatus('resizeStatus','أدخل عرضًا وارتفاعًا صحيحين بين 1 و12000 بكسل.');return;
+    }
+    if(!sources.length){setStatus('resizeStatus','أضف صورة واحدة على الأقل أولًا.');return;}
+    clearResults();
+    const type=$('format').value,quality=Number($('quality').value);
+    $('resizeBtn').disabled=true;
+    let done=0;
+    try{
+      for(const source of sources){
+        const bitmap=await createImageBitmap(source.blob);
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        if(type==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}
+        ctx.drawImage(bitmap,0,0,w,h);bitmap.close?.();
+        const blob=await blobFromCanvas(canvas,type,quality);
+        const url=URL.createObjectURL(blob);
+        const ext=type==='image/jpeg'?'jpg':type.split('/')[1];
+        results.push({blob,url,name:source.name.replace(/\.[^.]+$/,'')+'.'+ext,width:w,height:h,type});
+        done++; updateResultView();
+        setStatus('resizeStatus',`تمت معالجة ${done} من ${sources.length} صورة.`);
+      }
+      setStatus('resizeStatus',`اكتملت المعالجة: ${countText(done)} بمقاس ${w} × ${h} بكسل.`);
+    }catch(err){setStatus('resizeStatus','حدث خطأ أثناء المعالجة: '+err.message);}
+    finally{$('resizeBtn').disabled=false;}
+  }
+  $('resizeBtn').addEventListener('click',resizeAll);
+
+  async function copyResult(item,button){
+    if(!navigator.clipboard?.write||!window.ClipboardItem){
+      setStatus('copyStatus','نسخ الصور غير مدعوم في هذا السياق. افتح الصفحة عبر localhost أو HTTPS، أو استخدم زر «حفظ».');return;
+    }
+    try{
+      await navigator.clipboard.write([new ClipboardItem({[item.type]:item.blob})]);
+      const old=button.textContent;button.textContent='تم النسخ ✓';setStatus('copyStatus',`نُسخت ${item.name} إلى الحافظة.`);
+      setTimeout(()=>button.textContent=old,1400);
+    }catch(err){setStatus('copyStatus','لم يتمكن المتصفح من الكتابة إلى الحافظة. جرّب فتح الصفحة عبر localhost أو HTTPS ثم اسمح بالوصول للحافظة.');}
+  }
+  function downloadResult(item){
+    const a=document.createElement('a');a.href=item.url;a.download=item.name;a.click();
+  }
+})();
+</script>
+</body>
+</html>
